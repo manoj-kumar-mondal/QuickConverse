@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --main-bg: #080d0f;
+  --main-color: #ffffff;
+  --header-bg: #202c33;
+  --menubar-bg: #111b21;
+  --chat-window-bg: #0b141a;
+  --contact-active-bg: #2a3942;
+  --contact-hover-bg: #2a39428a;
+  --light-icon: #aebac1;
+  --light-color-font: #696c6e;
+  --text-msg-primary-bg: #005c4b;
+  --text-msg-secondary-bg: #202c33;
+  --scrollbar-bg: #374045;
+}
+
+@layer base {
+  body {
+    background: var(--main-bg);
+    color: var(--main-color);
+  }
+  input {
+    outline: none;
+  }
+  
+  input[type="text"]::placeholder {
+    color: var(--light-color-font);
+  }
+}
+
+@layer components {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-bg);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: none;
+  }
+
+  .temp {
+    @apply border border-white
+  }
+
+  .customBtn {
+    @apply h-9 w-9 flex items-center justify-center bg-green-800 rounded-full
+  }
+
+  .customBtn-counter {
+    @apply flex items-center justify-center bg-transparent rounded-none
+  }
+}
