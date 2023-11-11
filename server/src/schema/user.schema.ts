@@ -1,4 +1,4 @@
-import mongoose, { Schema, model } from 'mongoose';
+import { Schema, model } from 'mongoose';
 
 export const UserSchema = new Schema({
     userName: {
@@ -19,12 +19,12 @@ export const UserSchema = new Schema({
     recipientList: [
         {
             recipient: {
-                type: mongoose.Schema.Types.ObjectId,
+                type: Schema.Types.ObjectId,
                 ref: 'users',
                 required: true
             },
             messageList: {
-                type: mongoose.Schema.Types.ObjectId,
+                type: Schema.Types.ObjectId,
                 ref: 'chats',
                 required: true,
             }

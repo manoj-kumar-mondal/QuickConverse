@@ -1,8 +1,10 @@
 import { Router } from 'express';
-import { otpVerificationHandler, signInHandler } from '../controllers/auth.controller.js';
+import AuthController from '../controllers/auth.controller.js';
 const router = Router();
 
-router.post('/signin', signInHandler);
-router.post('/verify-otp', otpVerificationHandler);
+const authController = new AuthController();
+
+router.post('/signin', authController.signInHandler);
+router.post('/verify-otp', authController.otpVerificationHandler);
 
 export default router;

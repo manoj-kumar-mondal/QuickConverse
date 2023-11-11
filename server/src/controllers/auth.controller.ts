@@ -1,71 +1,74 @@
-import { RequestHandler } from 'express';
+import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import UserModel from '../schema/user.js';
+import UserModel from '../schema/user.schema.js';
 import { e_HttpStatusCode } from './constraints.js';
 import { OtpManager } from '../utils/otp-manager.js';
 import { OtpStatus } from '../common/common.js';
 import { jwtPrivateKey } from '../main.js';
 
-export const signInHandler: RequestHandler = async (req, res) => {
-    const { mobileNumber } = req.body;
+export default class AuthController {
+    static readonly jwtTokenTimeOut = 2 * 60 * 3600; // 2 hrs
 
-    if (!mobileNumber || mobileNumber.length != 10) {
-        return res.status(e_HttpStatusCode.BAD_REQUEST).json({
-            message: 'please provide valid phone number'
-        });
-    }
+    constructor() { }
 
-    /* Creating otp object for further verification */
-    const otpManager = new OtpManager(mobileNumber);
+    public async signInHandler(req: Request, res: Response) {
+        const { mobileNumber } = req.body;
 
-    res.status(e_HttpStatusCode.SUCCESS).json({
-        otp: otpManager.otp,
-        token: otpManager.verificationToken
-    });
-}
-
-export const otpVerificationHandler: RequestHandler = async (req, res) => {
-    try {
-        const { token, otp } = req.body;
-
-        if (!token || !otp) {
+        if (!mobileNumber || mobileNumber.length != 10) {
             return res.status(e_HttpStatusCode.BAD_REQUEST).json({
-                message: 'some fields are missing'
+                message: 'please provide valid phone number'
             });
         }
 
-        const otpStatus = await OtpManager.verifyOtp(token, otp);
-        let message = '', statuscode = e_HttpStatusCode.BAD_REQUEST;
-        console.log(otpStatus);
-        switch (otpStatus) {
-            case OtpStatus.OTP_EXPIRED:
-                message = 'otp expired';
-                break;
+        /* Creating otp object for further verification */
+        const otpManager = new OtpManager(mobileNumber);
 
-            case OtpStatus.OTP_INCORRECT:
-                message = 'incorrect otp provided';
-                break;
+        res.status(e_HttpStatusCode.SUCCESS).json({
+            otp: otpManager.otp,
+            token: otpManager.verificationToken
+        });
+    }
 
-            case OtpStatus.OTP_VERIFIED:
-                message = 'otp verified';
-                statuscode = e_HttpStatusCode.SUCCESS;
-                break;
+    public async otpVerificationHandler(req: Request, res: Response) {
+        try {
+            const { token, otp } = req.body;
+            let mobileNumber = '';
 
-            case OtpStatus.OTP_ERROR:
-            default:
-                message: 'internal server error';
-                statuscode: e_HttpStatusCode.INTERNAL_SERVER_ERROR;
-                break;
-        }
+            if (!token || !otp) {
+                return res.status(e_HttpStatusCode.BAD_REQUEST).json({
+                    message: 'some fields are missing'
+                });
+            }
 
-        if (otpStatus === OtpStatus.OTP_VERIFIED) {
-            const mobileNumber = await OtpManager.getMobileNumber(token);
+            /* default message and status code */
+            let message = 'internal server error', statuscode = e_HttpStatusCode.INTERNAL_SERVER_ERROR;
+            const otpStatus = await OtpManager.verifyOtp(token, otp);
 
-            if (mobileNumber !== OtpStatus.OTP_EXPIRED && mobileNumber !== OtpStatus.OTP_ERROR) {
+            switch (otpStatus) {
+                case OtpStatus.OTP_EXPIRED:
+                    message = 'otp expired';
+                    break;
+
+                case OtpStatus.OTP_INCORRECT:
+                    message = 'incorrect otp provided';
+                    break;
+
+                case OtpStatus.OTP_ERROR:
+                    break;
+
+                default:
+                    if (typeof otpStatus === 'string') {
+                        mobileNumber = otpStatus;
+                        message = 'otp verified'
+                    }
+                    break;
+            }
+
+            if (mobileNumber) {
                 const user = await UserModel.findOne({ mobileNumber });
 
                 if (user) {
-                    const token = jwt.sign(user._id, jwtPrivateKey, { expiresIn: '1h' });
+                    const token = AuthController.generateJwtToken(user._id.toString());
 
                     return res.status(200).json({
                         message, token
@@ -77,21 +80,31 @@ export const otpVerificationHandler: RequestHandler = async (req, res) => {
                         userName: mobileNumber,
                     });
 
-                    const token = jwt.sign(newUser._id, jwtPrivateKey, { expiresIn: '1h' });
+                    const token = AuthController.generateJwtToken(newUser._id.toString());
 
                     return res.status(201).json({
-                        message: 'new registration', token, isNew: true
+                        message: 'newly registered', token
                     });
                 }
             }
+
+            res.status(statuscode).json({
+                message,
+            });
+
+        } catch (error) {
+            console.log(error);
         }
+    }
 
-        res.status(statuscode).json({
-            message,
+    private static generateJwtToken(id: string): string {
+        const token = jwt.sign({
+            id, time: Date.now()
+        }, jwtPrivateKey, { expiresIn: AuthController.jwtTokenTimeOut });
+        return token;
+    }
 
-        });
-
-    } catch (error) {
-        console.log(error);
+    private static validateIncomingToken(token: string) {
+        // validate auth token
     }
 }

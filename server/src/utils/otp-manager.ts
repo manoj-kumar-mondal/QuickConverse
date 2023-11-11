@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { serverFilePath } from './constant.js';
 import { OtpStatus } from '../common/common.js';
-
+import OtpModel from '../schema/otp.schema.js';
 export class OtpManager {
     private _mobileNumber: string;
     private _otp: string;
@@ -10,17 +10,18 @@ export class OtpManager {
 
     /* static variables */
     static readonly maxOtpLength = 4;
-    static readonly expiryInTime = 2 * 60 * 1000; //2 mins
+    static readonly expiryInTime = 1 * 60 * 1000; //2 mins
+    static readonly intervalTime = OtpManager.expiryInTime + 5; // 5 sec buffer added to expiry time.
     static intervalInstance: any = null;
-    static otpObjectLength: number = 0;
+    static otpObjCount: number = 0;
 
     constructor(mobileNumber: string) {
         this._mobileNumber = mobileNumber;
         this._otp = OtpManager.generateOtp();
         this._expiryTimeStamp = Date.now() + OtpManager.expiryInTime;
         this._verificationToken = OtpManager.createToken(this._mobileNumber, this._otp);
-        OtpManager.insertObjectToList(this);
-        OtpManager.monitorOtpManager();
+        OtpManager.registerOtp(this);
+        OtpManager.monitor();
     }
 
     /* Getters */
@@ -37,39 +38,45 @@ export class OtpManager {
         return this._verificationToken;
     }
 
-    static async verifyOtp(token: string, otp: string): Promise<OtpStatus> {
+    static async registerOtp(otpObj: OtpManager) {
         try {
-            const list = await OtpManager.getFileData();
-            let findToken = list.items.filter((item: any) => item._verificationToken === token);
-            if (findToken.length === 0) {
-                return OtpStatus.OTP_EXPIRED;
+            const findInstance = await OtpModel.findOne({ mobileNumber: otpObj._mobileNumber });
+
+            if (!findInstance) {
+                /* create new instance */
+                await OtpModel.create({
+                    mobileNumber: otpObj._mobileNumber,
+                    token: otpObj._verificationToken,
+                    expiryTime: otpObj._expiryTimeStamp,
+                    otp: otpObj._otp
+                });
+                OtpManager.otpObjCount++;
+            } else {
+                /* update the existing instance */
+                await OtpModel.findByIdAndUpdate(findInstance._id, {
+                    token: otpObj._verificationToken,
+                    expiryTime: otpObj._expiryTimeStamp,
+                    otp: otpObj._otp
+                })
             }
-            return (findToken[0]._otp === otp ? OtpStatus.OTP_VERIFIED : OtpStatus.OTP_INCORRECT);
         } catch (error) {
-            return OtpStatus.OTP_ERROR;
+            throw (error);
         }
     }
 
-    static async getMobileNumber(token: string): Promise<OtpStatus | string> {
+    static async verifyOtp(token: string, otp: string): Promise<OtpStatus | string> {
         try {
-            const list = await OtpManager.getFileData();
-            let getToken: any = null;
-            let otherItems = list.items.filter((item: any) => {
-                if (item._verificationToken === token) {
-                    getToken = item;
-                } else {
-                    return item;
-                }
-            });
+            const findInstance = await OtpModel.findOne({ token });
 
-            if (!getToken) {
+            if (!findInstance) {
                 return OtpStatus.OTP_EXPIRED;
+            } else {
+                if (findInstance.otp === otp) {
+                    return findInstance.mobileNumber;
+                } else {
+                    return OtpStatus.OTP_INCORRECT;
+                }
             }
-
-            list.length = otherItems.length;
-            list.items = otherItems
-            await OtpManager.setFileData(list);
-            return getToken._mobileNumber;
         } catch (error) {
             return OtpStatus.OTP_ERROR;
         }
@@ -88,59 +95,47 @@ export class OtpManager {
     }
 
     private static createToken(key1: string, key2: string): string {
-        const token = Buffer.from(`${key1}${key2}`).toString('base64');
+        const token = Buffer.from(`${key2}${key1}`).toString('base64');
         return token;
     }
 
-    private static monitorOtpManager() {
+    private static async deleteExpiredOtp() {
+        try {
+            const otpList = await OtpModel.find({});
+
+            const expiredItems = otpList.filter(item => {
+                if (Date.now() > item.expiryTime) {
+                    return item._id;
+                }
+            });
+
+            for (let id of expiredItems) {
+                await OtpModel.findByIdAndDelete(id);
+            }
+            await OtpManager.updateOtpObjCount();
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    private static async updateOtpObjCount() {
+        try {
+            const list = await OtpModel.find({});
+            OtpManager.otpObjCount = list.length;
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    private static monitor() {
         if (!OtpManager.intervalInstance) {
             OtpManager.intervalInstance = setInterval(async () => {
-                await OtpManager.deleteExpiredObjects();
-                if (OtpManager.otpObjectLength <= 0) {
+                await OtpManager.deleteExpiredOtp();
+                if (OtpManager.otpObjCount <= 0) {
                     clearInterval(OtpManager.intervalInstance);
                     OtpManager.intervalInstance = null;
                 }
-            }, OtpManager.expiryInTime);
+            }, OtpManager.intervalTime);
         }
     }
-
-    private static async insertObjectToList(otpObj: OtpManager) {
-        try {
-            const list = await OtpManager.getFileData();
-            list.items.push(otpObj);
-            list.length++;
-            await OtpManager.setFileData(list);
-            OtpManager.otpObjectLength++;
-        } catch (error) {
-            throw (error);
-        }
-    }
-
-    private static async deleteExpiredObjects() {
-        try {
-            const list = await OtpManager.getFileData();
-            const remainingItems = list.items.filter((item: any) => Date.now() < item._expiryTimeStamp);
-            OtpManager.otpObjectLength = remainingItems.length;
-            list.length = remainingItems.length;
-            list.items = remainingItems;
-            await OtpManager.setFileData(list);
-        } catch (error) {
-            throw (error);
-        }
-    }
-
-    private static async getFileData() {
-        try {
-            const fileData = await readFile(serverFilePath.otpData, { encoding: 'utf-8' });
-            const list = JSON.parse(fileData);
-            return list;
-        } catch (error) {
-            throw (error);
-        }
-    }
-
-    private static async setFileData(listData: object) {
-        await writeFile(serverFilePath.otpData, JSON.stringify(listData), { encoding: 'utf-8' });
-    }
-
 }
