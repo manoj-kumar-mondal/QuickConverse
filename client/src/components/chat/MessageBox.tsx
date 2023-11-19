@@ -16,7 +16,7 @@ const MessageBox: React.FC = () => {
                     type="text"
                     placeholder="Type a message"
                 />
-                <button className='realtive md:hidden bg-[#2a3942] rounded-r-full px-4'>
+                <button className='relative md:hidden bg-[#2a3942] rounded-r-full px-4'>
                     <MdAttachFile className="text-lg text-iconLight" />
                 </button>
             </div>

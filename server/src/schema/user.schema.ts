@@ -13,6 +13,10 @@ export const UserSchema = new Schema({
     //     required: true,
     //     unique: true,
     // },
+    isRegistered: {
+        type: Boolean,
+        required: true
+    },
     email: {
         type: String,
     },

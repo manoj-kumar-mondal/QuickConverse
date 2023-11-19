@@ -16,15 +16,15 @@ export class QcDate {
     static formattedDateAndTime(): string {
         const moment = new Date(Date.now());
 
-        const day = QcDate.checkForTwoCharacter(moment.getDay());
-        const month = QcDate.checkForTwoCharacter(moment.getMonth());
+        const day = QcDate.checkForTwoCharacter(moment.getDate());
+        const month = QcDate.checkForTwoCharacter(moment.getMonth() + 1);
         const year = String(moment.getFullYear());
 
         const hour = QcDate.checkForTwoCharacter(moment.getHours());
         const minute = QcDate.checkForTwoCharacter(moment.getMinutes());
         const second = QcDate.checkForTwoCharacter(moment.getSeconds());
 
-        const formattedDate = `[${day}-${month}-${year} ${hour}:${minute}:${year}]`;
+        const formattedDate = `[${day}-${month}-${year} ${hour}:${minute}:${second}]`;
         return formattedDate;
     }
 

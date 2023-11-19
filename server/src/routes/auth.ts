@@ -2,9 +2,8 @@ import { Router } from 'express';
 import AuthController from '../controllers/auth.controller.js';
 const router = Router();
 
-const authController = new AuthController();
-
-router.post('/signin', authController.signInHandler);
-router.post('/verify-otp', authController.otpVerificationHandler);
+router.post('/signin', AuthController.signInHandler);
+router.post('/verify-otp', AuthController.otpVerificationHandler);
+router.post('/new-registration', AuthController.validatedRoute, AuthController.newRegistrationHandler);
 
 export default router;

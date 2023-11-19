@@ -1,13 +1,14 @@
 import Menu from "@/components/menu/Menu";
 import ChatWindow from "@/components/chat/ChatWindow";
-import { useEffect, useState } from "react";
-import { useRecoilState, useRecoilValue } from 'recoil';
+import { useEffect } from "react";
+import { useRecoilState } from 'recoil';
 import { atomUIState } from "@/state-manager/atoms";
 import AuthComponent from "../auth/Main";
+import { useAppSelector } from "@/state-manager";
 
 const QuickConverse: React.FC = () => {
     const [uiState, setUiState] = useRecoilState(atomUIState);
-    const isAuth = false;
+    const authState = useAppSelector(state => state.auth);
 
     useEffect(() => {
         if (uiState.activeContactId) {
@@ -18,7 +19,7 @@ const QuickConverse: React.FC = () => {
     return (
         <>
             {
-                !isAuth ? <AuthComponent /> :
+                !authState.isAuthenticated ? <AuthComponent /> :
                     <div className="absolute top-0 left-0 w-full h-full">
                         <section
                             className="md:flex md:w-[80%]

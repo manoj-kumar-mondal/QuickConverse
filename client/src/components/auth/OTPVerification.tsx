@@ -1,6 +1,7 @@
 import { useAppDispatch, useAppSelector } from '@/state-manager';
 import { getOTPAction, verifyOTPAction } from '@/state-manager/actions';
 import React, { ChangeEvent, FormEvent, useEffect, useState } from 'react'
+import InputField from './InputField';
 
 interface IFormData {
     mobileNumber: string;
@@ -85,29 +86,23 @@ const OTPVerification = () => {
     return (
         <div className='w-full'>
             <form className="w-full" onSubmit={handleFormSubmit}>
-                <p className="font-semibold text-red-600 text-sm md:text-lg mt-2">{formData.errorMessage}</p>
-                <input
+                <p className="font-light text-red-600 text-sm md:text-base mt-2">{formData.errorMessage}</p>
+                <InputField
                     name="mobileNumber"
-                    className={`w-full my-3 md:my-4 px-4 md:px-6 py-2 rounded-lg md:py-3 
-                                bg-headerBg ${formData.type === 'otp' && 'text-slate-500'} text-sm md:text-base`}
-                    type="text"
-                    placeholder="Mobile Number"
+                    placeholder='Mobile number'
                     value={formData.mobileNumber}
-                    onChange={handleInputChange}
+                    changeHandler={handleInputChange}
                     readOnly={formData.type === 'otp'}
-                    onFocus={() => {
+                    focusHandler={() => {
                         setFormData({ ...formData, errorMessage: '' });
                     }}
-                    autoComplete='off'
+                    className={`${formData.type === 'otp' && 'text-slate-500'}`}
                 />
-                <input
+                <InputField
                     name="otp"
-                    className="w-full my-3 md:my-4 px-4 md:px-6 py-2 rounded-lg md:py-3 bg-headerBg text-sm md:text-base"
-                    type="text"
                     placeholder="OTP"
                     value={formData.otp}
-                    onChange={handleInputChange}
-                    autoComplete='off'
+                    changeHandler={handleInputChange}
                 />
                 <button className={`font-semibold w-full mt-6 px-5 py-1.5 md:py-2.5 bg-green-700 rounded-lg hover:bg-green-800 ${selector.loading && 'hover:cursor-not-allowed'}`} disabled={selector.loading}>
                     {

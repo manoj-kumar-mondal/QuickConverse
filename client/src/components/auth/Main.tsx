@@ -1,6 +1,10 @@
+import { useAppSelector } from "@/state-manager";
+import NewRegistration from "./NewRegistration";
 import OTPVerification from "./OTPVerification";
 
 const Main: React.FC = () => {
+    const authSelector = useAppSelector(state => state.auth);
+
     return (
         <section className="w-full h-[90vh] flex items-center justify-center">
             <div className="w-2/5 min-w-[350px] max-w-xl bg-chatWindowBg px-6 md:px-10 py-7 md:py-12 rounded-2xl">
@@ -9,7 +13,10 @@ const Main: React.FC = () => {
                     <p className="text-blue-800 text-sm md:text-lg">Login</p>
                 </div>
                 <div className="w-full my-3 md:my-5">
-                    <OTPVerification />
+                    {
+                        authSelector.currentWindow === 'otp-verification' ?
+                            <OTPVerification /> : <NewRegistration />
+                    }
                 </div>
             </div>
 
